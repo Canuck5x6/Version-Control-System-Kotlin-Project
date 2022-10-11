@@ -40,6 +40,10 @@ fun doCommands(command:String, parameter:String)
 // Methods that handle command line options
 //
 // ************************************************
+
+/**
+ * 
+ */
 fun handleLog(){
     val logContents = getLogContents()
     if(logContents.size == 0) {
@@ -59,28 +63,6 @@ fun handleCommit(commitParameter: String = "") {
         commitParameter.isEmpty() -> println("Message was not passed.")
         getListOfChangedFiles().isEmpty() -> println("Nothing to commit.")
         else -> doCommit(commitParameter)
-    }
-}
-
-fun getListOfChangedFiles():MutableList<String> {
-    // Guard against nothing being tracked
-    val listOfTrackedFiles = getListOfTrackedFiles()
-
-    val logContent = getLogContents()
-
-    return if (logContent.isEmpty()) listOfTrackedFiles else {
-        val lastCommitId = logContent.last().split(",").first()
-        val newListOfChangedFiles = mutableListOf<String>()
-
-        for (aTrackedFile in listOfTrackedFiles) {
-            // check if file is changed
-            val curHash = getHashOfFile(aTrackedFile)
-            val lastHash = getHashOfFile(aTrackedFile, "$COMMIT_FOLDER$PATH_SEP$lastCommitId$PATH_SEP")
-            if (curHash != lastHash) {
-                newListOfChangedFiles += aTrackedFile
-            }
-        }
-        newListOfChangedFiles
     }
 }
 
@@ -157,8 +139,37 @@ fun showTheHelp(){
         """.trimIndent()
     )
 }
-
+// *****************************************************
+//
 // Utility Functions
+//
+// *****************************************************
+
+/**
+ * 
+ */
+fun getListOfChangedFiles():MutableList<String> {
+    // Guard against nothing being tracked
+    val listOfTrackedFiles = getListOfTrackedFiles()
+
+    val logContent = getLogContents()
+
+    return if (logContent.isEmpty()) listOfTrackedFiles else {
+        val lastCommitId = logContent.last().split(",").first()
+        val newListOfChangedFiles = mutableListOf<String>()
+
+        for (aTrackedFile in listOfTrackedFiles) {
+            // check if file is changed
+            val curHash = getHashOfFile(aTrackedFile)
+            val lastHash = getHashOfFile(aTrackedFile, "$COMMIT_FOLDER$PATH_SEP$lastCommitId$PATH_SEP")
+            if (curHash != lastHash) {
+                newListOfChangedFiles += aTrackedFile
+            }
+        }
+        newListOfChangedFiles
+    }
+}
+
 fun getLinesOfFileAsList(fileToLoad: File):MutableList<String> {
     val listOfLines = if(fileToLoad.exists()) fileToLoad.readText().split(LINE_SEP).toMutableList() else mutableListOf()
     listOfLines.removeAll { it == "" }
@@ -177,6 +188,9 @@ fun createFolderIfNotExist(folderName: String){
     }
 }
 
+/**
+ * Create a unique commit ID by hashing the current date/time
+ */
 fun createCommitId():String {
     // use the current date/time to define a commit id
     val sha = MessageDigest.getInstance("SHA-256")
@@ -184,18 +198,24 @@ fun createCommitId():String {
     return hashBytes("SHA-256", sha.digest())
 }
 
+/**
+ * Read the lines of the index file into a string array
+ * index file tracks the files that are being watched.
+ */
 fun getListOfTrackedFiles(): MutableList<String> {
     val indexFile = File("$VCS_FOLDER$PATH_SEP$INDEX_FILE")
 
     return getLinesOfFileAsList(indexFile)
 }
 
+// Read the contents of the log file to a mutable string array
 fun getLogContents(): MutableList<String> {
     val logFile = File("$VCS_FOLDER$PATH_SEP$LOG_FILE")
 
     return getLinesOfFileAsList(logFile)
 }
 
+// Read the contents of the log file as a map of commit ID's
 fun getMapOfCommits(): Map<String, String> {
     val logFile = File("$VCS_FOLDER$PATH_SEP$LOG_FILE")
     return getLinesOfFileAsList(logFile).associateBy { it.split(",").first() }
